@@ -2,29 +2,35 @@
 
 import { ProductCard } from "@/components/ui/product-card";
 import Link from "next/link";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  discount?: number;
-  image: string;
-  category: string;
-}
+import { useFeaturedProducts, useNewProducts } from "@/lib/hooks/use-queries";
+import { Product } from "@/lib/data/products";
 
 interface FeaturedProductsProps {
   title: string;
   subtitle?: string;
   products: Product[];
   viewAllLink?: string;
+  isNewProducts?: boolean;
 }
 
 export function FeaturedProducts({
   title,
   subtitle,
-  products,
+  products: initialProducts,
   viewAllLink = "/products",
+  isNewProducts = false,
 }: FeaturedProductsProps) {
+  // Call both hooks unconditionally to avoid React Hook rules violation
+  const { data: featuredProducts, isLoading: isFeaturedLoading } = useFeaturedProducts();
+  const { data: newProducts, isLoading: isNewLoading } = useNewProducts();
+  
+  // Determine which data and loading state to use based on the isNewProducts prop
+  const queryProducts = isNewProducts ? newProducts : featuredProducts;
+  const isLoading = isNewProducts ? isNewLoading : isFeaturedLoading;
+  
+  // Use the query data if available, otherwise fall back to the initial data
+  const products = queryProducts || initialProducts;
+
   return (
     <section className="py-16 md:py-24 relative">
       {/* Subtle background pattern */}
@@ -67,18 +73,29 @@ export function FeaturedProducts({
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="group transform transition-all duration-300 hover:-translate-y-2">
-              <ProductCard
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                discount={product.discount}
-                image={product.image}
-                category={product.category}
-              />
-            </div>
-          ))}
+          {isLoading ? (
+            // Show loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-64 mb-4"></div>
+                <div className="bg-gray-200 dark:bg-gray-800 h-6 rounded w-3/4 mb-2"></div>
+                <div className="bg-gray-200 dark:bg-gray-800 h-4 rounded w-1/2"></div>
+              </div>
+            ))
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="group transform transition-all duration-300 hover:-translate-y-2">
+                <ProductCard
+                  id={product.id}
+                  name={product.name}
+                  price={product.price}
+                  discount={product.discount}
+                  image={product.image}
+                  category={product.category}
+                />
+              </div>
+            ))
+          )}
         </div>
       </div>
     </section>
